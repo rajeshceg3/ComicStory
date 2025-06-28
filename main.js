@@ -73,13 +73,57 @@ if (typeof THREE === 'undefined') {
         pointLight.position.set(2, 2, 2); // Position the light source.
         scene.add(pointLight);
 
+        // Function to create the character
+        function createCharacter() {
+            const character = new THREE.Group();
+
+            // Body
+            const bodyRadius = 0.5;
+            const bodyGeometry = new THREE.SphereGeometry(bodyRadius, 32, 32);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x0077ff }); // Blue body
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = bodyRadius; // Position body so its base is at the group's origin
+            character.add(body);
+
+            // Head
+            const headRadius = 0.3;
+            const headGeometry = new THREE.SphereGeometry(headRadius, 32, 32);
+            const headMaterial = new THREE.MeshPhongMaterial({ color: 0xffcc00 }); // Yellow head
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.name = "characterHead"; // Assign a name to the head
+            head.userData.initialY = bodyRadius * 2 + headRadius; // Store initial Y position
+            head.position.y = head.userData.initialY; // Position head on top of the body
+            character.add(head);
+
+            return character;
+        }
+
+        // Create and add the character to the scene
+        const character = createCharacter();
+        // The character group's origin is at the base of the body.
+        // The ground is at y = -1.5.
+        // So, set the character's y position to the ground's y position.
+        character.position.y = ground.position.y;
+        scene.add(character);
+
+        let animationTime = 0; // Time variable for animation
+
         // Animation loop: Called repeatedly to update the scene and render it.
         function animate() {
             requestAnimationFrame(animate); // Request the next frame for smooth animation.
 
+            animationTime += 0.05; // Increment time for animation
+
             // Animate the cube by rotating it slightly each frame.
             cube.rotation.x += 0.01;
             cube.rotation.y += 0.01;
+
+            // Bob the character's head
+            const characterHead = character.getObjectByName("characterHead");
+            if (characterHead) {
+                const bobAmplitude = 0.05; // How much the head bobs
+                characterHead.position.y = characterHead.userData.initialY + Math.sin(animationTime) * bobAmplitude;
+            }
 
             // Update OrbitControls: Necessary if controls.enableDamping or controls.autoRotate are set.
             // Also good practice to include for other potential updates.
