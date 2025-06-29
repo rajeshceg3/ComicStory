@@ -130,6 +130,14 @@ if (typeof THREE === 'undefined') {
         let animationTime = 0; // Time variable for animation
         let gameWon = false; // Flag to track if the game has been won
         let score = 0; // Initialize score
+        let hasKey = false;
+
+        function updateInfoDisplay() {
+            if (infoDisplay) {
+                infoDisplay.textContent = `Score: ${score} | Key: ${hasKey ? 'Yes' : 'No'}`;
+            }
+        }
+        updateInfoDisplay(); // Initial display update
 
         // Animation loop: Called repeatedly to update the scene and render it.
         function animate() {
@@ -160,16 +168,32 @@ if (typeof THREE === 'undefined') {
                     scene.remove(collectibleItem);
                     collectibleItem = null; // Set to null to prevent further checks and allow garbage collection
                     score++;
-                    infoDisplay.textContent = "Score: " + score;
+                    hasKey = true;
+                    if (goalFlag) {
+                        goalFlag.material.color.setHex(0x00ff00); // Change goal to green
+                    }
+                    updateInfoDisplay();
                 }
             }
 
             // Check for win condition
             if (!gameWon && character && goalFlag) {
                 const distanceToGoal = character.position.distanceTo(goalFlag.position);
-                if (distanceToGoal < 1.0) { // Threshold of 1 unit
-                    alert("You reached the flag!");
+                if (distanceToGoal < 1.0 && hasKey) { // Threshold of 1 unit and has key
+                    alert("Congratulations! You found the key and reached the goal!");
                     gameWon = true;
+                } else if (distanceToGoal < 1.0 && !hasKey) { // Threshold of 1 unit but no key
+                    if (infoDisplay) {
+                        const originalText = infoDisplay.textContent; // Save current text
+                        infoDisplay.textContent = "You need to find the key first!";
+                        setTimeout(() => {
+                            // Check if the message is still "You need to find the key first!"
+                            // and if game is not won (to avoid overwriting a win message if key is obtained quickly after)
+                            if (infoDisplay.textContent === "You need to find the key first!" && !gameWon) {
+                                updateInfoDisplay(); // Restore score and key status
+                            }
+                        }, 2000); // Display message for 2 seconds
+                    }
                 }
             }
 
