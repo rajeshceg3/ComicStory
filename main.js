@@ -7,10 +7,13 @@ if (typeof THREE === 'undefined') {
 } else {
     // Get the container element from the HTML.
     const container = document.getElementById('container');
+    const infoDisplay = document.getElementById('infoDisplay'); // Get reference to info display
 
     // Ensure the container element exists before proceeding.
     if (!container) {
         console.error('Container element #container not found.');
+    } else if (!infoDisplay) {
+        console.error('Info display element #infoDisplay not found.');
     } else {
         // Scene setup: The scene is the container for all 3D objects.
         const scene = new THREE.Scene();
@@ -115,8 +118,18 @@ if (typeof THREE === 'undefined') {
         character.position.y = ground.position.y;
         scene.add(character);
 
+        // Collectible Item: A TorusKnot that can be collected.
+        // TorusKnotGeometry(radius, tube, tubularSegments, radialSegments)
+        const collectibleGeometry = new THREE.TorusKnotGeometry(0.3, 0.1, 100, 16);
+        const collectibleMaterial = new THREE.MeshPhongMaterial({ color: 0xffd700 }); // Gold color
+        let collectibleItem = new THREE.Mesh(collectibleGeometry, collectibleMaterial); // Changed to let
+        collectibleItem.name = "collectible"; // Name the object
+        collectibleItem.position.set(2, 0.5, -2); // Position it on the ground plane, adjust y based on ground and item size
+        scene.add(collectibleItem); // Add the collectible item to the scene.
+
         let animationTime = 0; // Time variable for animation
         let gameWon = false; // Flag to track if the game has been won
+        let score = 0; // Initialize score
 
         // Animation loop: Called repeatedly to update the scene and render it.
         function animate() {
@@ -128,11 +141,27 @@ if (typeof THREE === 'undefined') {
             cube.rotation.x += 0.01;
             cube.rotation.y += 0.01;
 
+            // Animate the collectible item
+            if (collectibleItem) {
+                collectibleItem.rotation.y += 0.02;
+            }
+
             // Bob the character's head
             const characterHead = character.getObjectByName("characterHead");
             if (characterHead) {
                 const bobAmplitude = 0.05; // How much the head bobs
                 characterHead.position.y = characterHead.userData.initialY + Math.sin(animationTime) * bobAmplitude;
+            }
+
+            // Check for collectible item collision
+            if (collectibleItem && character) { // Ensure both character and collectibleItem exist
+                const distanceToCollectible = character.position.distanceTo(collectibleItem.position);
+                if (distanceToCollectible < 1.0) { // Threshold of 1 unit
+                    scene.remove(collectibleItem);
+                    collectibleItem = null; // Set to null to prevent further checks and allow garbage collection
+                    score++;
+                    infoDisplay.textContent = "Score: " + score;
+                }
             }
 
             // Check for win condition
@@ -163,9 +192,22 @@ if (typeof THREE === 'undefined') {
 
         // Event listener for keyboard input
         document.addEventListener('keydown', (event) => {
+            const speed = 0.1;
+            const boundary = 4.5;
+
             if (event.key === 'w' || event.key === 'W') {
-                character.position.z -= 0.1; // Move character forward
+                character.position.z -= speed; // Move character forward
+            } else if (event.key === 'a' || event.key === 'A') {
+                character.position.x -= speed; // Move character left
+            } else if (event.key === 's' || event.key === 'S') {
+                character.position.z += speed; // Move character backward
+            } else if (event.key === 'd' || event.key === 'D') {
+                character.position.x += speed; // Move character right
             }
+
+            // Ensure the character stays within the ground plane boundaries
+            character.position.x = Math.max(-boundary, Math.min(boundary, character.position.x));
+            character.position.z = Math.max(-boundary, Math.min(boundary, character.position.z));
         });
 
         // Start the animation loop.
