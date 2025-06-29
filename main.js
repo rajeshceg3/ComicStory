@@ -54,6 +54,15 @@ if (typeof THREE === 'undefined') {
         ground.rotation.x = -Math.PI / 2; // Rotate it to be horizontal (flat).
         scene.add(ground); // Add the ground to the scene.
 
+        // Goal Flag: A red cone representing the goal.
+        // ConeGeometry(radius, height, radialSegments)
+        const goalGeometry = new THREE.ConeGeometry(0.5, 1, 16); // Radius 0.5, Height 1, 16 segments
+        const goalMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 }); // Red color for the flag
+        const goalFlag = new THREE.Mesh(goalGeometry, goalMaterial);
+        goalFlag.name = "goalFlag"; // Name the object
+        goalFlag.position.set(0, 0.5, -5); // Position it in front of the character
+        scene.add(goalFlag); // Add the goal flag to the scene.
+
         // Lighting: Essential for MeshPhongMaterial to be visible.
 
         // AmbientLight: Provides a soft, diffuse light that illuminates all objects in the scene equally.
@@ -107,6 +116,7 @@ if (typeof THREE === 'undefined') {
         scene.add(character);
 
         let animationTime = 0; // Time variable for animation
+        let gameWon = false; // Flag to track if the game has been won
 
         // Animation loop: Called repeatedly to update the scene and render it.
         function animate() {
@@ -125,6 +135,15 @@ if (typeof THREE === 'undefined') {
                 characterHead.position.y = characterHead.userData.initialY + Math.sin(animationTime) * bobAmplitude;
             }
 
+            // Check for win condition
+            if (!gameWon && character && goalFlag) {
+                const distanceToGoal = character.position.distanceTo(goalFlag.position);
+                if (distanceToGoal < 1.0) { // Threshold of 1 unit
+                    alert("You reached the flag!");
+                    gameWon = true;
+                }
+            }
+
             // Update OrbitControls: Necessary if controls.enableDamping or controls.autoRotate are set.
             // Also good practice to include for other potential updates.
             if (controls && typeof controls.update === 'function') {
@@ -141,6 +160,13 @@ if (typeof THREE === 'undefined') {
             camera.updateProjectionMatrix(); // Apply the new aspect ratio.
             renderer.setSize(window.innerWidth, window.innerHeight); // Resize the renderer.
         }, false);
+
+        // Event listener for keyboard input
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'w' || event.key === 'W') {
+                character.position.z -= 0.1; // Move character forward
+            }
+        });
 
         // Start the animation loop.
         animate();
