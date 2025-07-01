@@ -20,8 +20,10 @@ if (typeof THREE === 'undefined') {
     } else {
         // Game state variables
         let npcCharacter; // Holds the Three.js Group for the NPC
+        let robotCharacter; // Holds the Three.js Group for the Robot
         let npcInteracted = false; // Flag to track if the initial NPC interaction has occurred
         let hasPassword = false; // Flag to track if the player has received the password from the NPC
+        let robotHasTeddyBear = false; // Flag to track if the robot has received the teddy bear
 
         // Scene setup: The scene is the container for all 3D objects.
         const scene = new THREE.Scene();
@@ -204,7 +206,7 @@ if (typeof THREE === 'undefined') {
 
         function updateInfoDisplay() {
             if (infoDisplay) {
-                infoDisplay.textContent = `Score: ${score} | Teddy Bear: ${hasTeddyBear ? 'Yes' : 'No'} | Code: ${hasPassword ? '1234' : 'No'}`;
+                infoDisplay.textContent = `Score: ${score} | Player Has Teddy: ${hasTeddyBear ? 'Yes' : 'No'} | Robot Has Teddy: ${robotHasTeddyBear ? 'Yes' : 'No'} | Code: ${hasPassword ? '1234' : 'No'}`;
             }
         }
         updateInfoDisplay(); // Initial display update
@@ -264,8 +266,56 @@ if (typeof THREE === 'undefined') {
             return npcGroup; // Return the NPC object
         }
 
+        // Function to create the Robot Character
+        function createRobotCharacter() {
+            const robotGroup = new THREE.Group();
+            const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0xaaaaaa }); // Metallic gray
+            const headMaterial = new THREE.MeshPhongMaterial({ color: 0xcccccc }); // Lighter gray
+            const eyeMaterial = new THREE.MeshPhongMaterial({ color: 0xffff00 }); // Yellow eyes
+
+            // Body
+            const bodyWidth = 0.5;
+            const bodyHeight = 0.7;
+            const bodyDepth = 0.3;
+            const bodyGeometry = new THREE.BoxGeometry(bodyWidth, bodyHeight, bodyDepth);
+            const robotBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            robotBody.position.y = bodyHeight / 2; // Position body so its base is at the group's origin
+            robotGroup.add(robotBody);
+
+            // Head
+            const headSize = 0.3;
+            const headGeometry = new THREE.BoxGeometry(headSize, headSize, headSize);
+            const robotHead = new THREE.Mesh(headGeometry, headMaterial);
+            // Position head on top of the body
+            robotHead.position.y = bodyHeight + (headSize / 2);
+            robotGroup.add(robotHead);
+
+            // Eyes
+            const eyeRadius = 0.05;
+            const eyeGeometry = new THREE.SphereGeometry(eyeRadius, 8, 8);
+
+            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            // Position eyes on the front of the head
+            // Head center is at (0, bodyHeight + headSize / 2, 0) locally to the group
+            // Eyes should be forward (positive Z), and spread apart (X)
+            leftEye.position.set(-headSize / 4, bodyHeight + headSize / 2, headSize / 2);
+            robotGroup.add(leftEye);
+
+            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            rightEye.position.set(headSize / 4, bodyHeight + headSize / 2, headSize / 2);
+            robotGroup.add(rightEye);
+
+            robotGroup.name = "robotCharacter";
+            return robotGroup;
+        }
+
         // Create and add the NPC to the scene during initialization
         npcCharacter = createNPC();
+
+        // Create, position, and add the Robot Character to the scene
+        robotCharacter = createRobotCharacter();
+        robotCharacter.position.set(3, ground.position.y, 1); // Position on the ground
+        scene.add(robotCharacter);
 
         // Function to create environment props (trees and rocks)
         function createEnvironmentProps() {
@@ -346,10 +396,27 @@ if (typeof THREE === 'undefined') {
                     collectibleItem = null; // Set to null to prevent further checks and allow garbage collection
                     score++;
                     hasTeddyBear = true; // Renamed from hasKey
+                    // Gate color change is now handled when robot gets the teddy bear
+                    updateInfoDisplay();
+                }
+            }
+
+            // Robot Interaction Logic: Give teddy bear to robot
+            if (robotCharacter && character && hasTeddyBear && !robotHasTeddyBear) {
+                const distanceToRobot = character.position.distanceTo(robotCharacter.position);
+                if (distanceToRobot < 1.0) { // Player is close enough to the robot
+                    robotHasTeddyBear = true;
+                    hasPassword = true; // Robot gives the password
+                    showNpcMessage("Robot: Oh, my teddy! Thank you! The password for the party is '1234'.", 4000);
+
                     if (partyGate) { // Check if partyGate exists
                         partyGate.material.color.setHex(0x00ff00); // Change gate to green
                     }
                     updateInfoDisplay();
+                    // Player should no longer "have" the teddy bear in their inventory for other interactions
+                    // hasTeddyBear = false; // This line is commented out as per discussion to allow win condition with player still "knowing" they helped with teddy.
+                                        // If hasTeddyBear is set to false, the win condition needs adjustment.
+                                        // For now, player "keeps" teddy status, implying they completed that task.
                 }
             }
 
@@ -362,29 +429,47 @@ if (typeof THREE === 'undefined') {
                         gameWon = true; // Set the game as won
                         // Future enhancement: Consider removing the gate or changing its appearance further.
                     } else if (hasTeddyBear && !hasPassword) { // Player has the teddy bear but not the password
-                        showNpcMessage("You have the teddy bear, but you need the password from the NPC to open the gate!", 2000);
+                        showNpcMessage("You've helped with the teddy bear, but you still need the password for the gate. Did the robot tell you what it is?", 2000);
                     } else if (!hasTeddyBear) { // Player does not have the teddy bear
                         showNpcMessage("You need the teddy bear and a password to open this gate!", 2000);
                     }
                 }
             }
 
+            // Animate Robot if it exists and doesn't have the teddy bear
+            if (robotCharacter && !robotHasTeddyBear) {
+                const jitterAmount = 0.02;
+                // Store initial Y to ensure it stays on the ground
+                const initialRobotY = robotCharacter.position.y;
+
+                robotCharacter.position.x += (Math.random() - 0.5) * jitterAmount;
+                robotCharacter.position.z += (Math.random() - 0.5) * jitterAmount;
+
+                // Constrain jitter to prevent robot from moving too far
+                const initialRobotX = 3; // The initial X position set for the robot
+                const initialRobotZ = 1; // The initial Z position set for the robot
+                robotCharacter.position.x = Math.max(initialRobotX - 0.1, Math.min(initialRobotX + 0.1, robotCharacter.position.x));
+                robotCharacter.position.z = Math.max(initialRobotZ - 0.1, Math.min(initialRobotZ + 0.1, robotCharacter.position.z));
+
+                // Ensure robot stays on the ground plane (its base y should be ground.position.y)
+                robotCharacter.position.y = initialRobotY;
+            }
+
             // NPC Interaction Logic: Handles dialogues when the player is near the NPC.
             if (npcCharacter && character && !gameWon) { // Only allow NPC interaction if game is not won
                 const distanceToNPC = character.position.distanceTo(npcCharacter.position);
                 if (distanceToNPC < 1.5) { // Player is close enough to the NPC
-                    if (!npcInteracted && !hasTeddyBear) {
-                        // Initial interaction: Player doesn't have the teddy bear yet.
-                        showNpcMessage("NPC: Hello little explorer! My friend, the robot, has lost their teddy bear. Can you help find it?");
+                    if (hasTeddyBear && robotHasTeddyBear) { // Player helped robot
+                        showNpcMessage("NPC: Thank you for helping the little robot! He's so much happier now. Enjoy the party!", 3000);
+                    } else if (!npcInteracted && !hasTeddyBear) { // Initial interaction: player doesn't have bear
+                        showNpcMessage("NPC: Hello little explorer! My friend, the little robot, is scared of the dark, and his teddy bear helps him sleep. He can't come to the party without it! Can you find his teddy bear?", 5000);
                         npcInteracted = true; // Mark that the initial interaction has occurred.
-                    } else if (hasTeddyBear && !hasPassword) {
-                        // Second interaction: Player has the teddy bear but not the password.
-                        showNpcMessage("NPC: Oh, thank you! You found the teddy bear! To get to the party, the secret code for the gate is '1234'.");
-                        hasPassword = true; // Grant the password.
-                        updateInfoDisplay(); // Update the info display to show password status.
+                    } else if (npcInteracted && hasTeddyBear && !robotHasTeddyBear) { // Player has bear, but robot doesn't
+                        showNpcMessage("NPC: I see you have a teddy bear! The little robot is over there. Maybe it's his?", 3000);
+                    } else if (npcInteracted && !hasTeddyBear) { // Player interacted, left, came back without bear
+                        showNpcMessage("NPC: Please try to find the teddy bear for the little robot.", 3000);
                     }
-                    // If npcInteracted is true and player still doesn't have the teddy bear, NPC says nothing more.
-                    // If player has both teddy bear and password, NPC interaction block is effectively skipped or has no new message.
+                    // The old "NPC gives password" logic is removed as the robot now handles this.
                 }
             }
 

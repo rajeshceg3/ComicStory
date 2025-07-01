@@ -8,8 +8,8 @@ A basic Three.js scene has been set up:
 - An `index.html` file serves as the entry point.
 - The Three.js library is included via CDN.
 - A `main.js` file contains the script to render a 3D scene with basic interactive elements.
-- The scene includes a character, a goal flag, a collectible item, and a ground plane.
-- Basic UI for score display.
+- The scene includes a player character, an NPC (Wise Old Tree), a Robot character, a collectible teddy bear, a party gate (goal), and a ground plane.
+- UI for score, inventory/status, and messages.
 
 ## How to View
 
@@ -18,16 +18,36 @@ A basic Three.js scene has been set up:
 
 ## Gameplay and Features
 
-The current version includes the following interactive elements:
+The current version includes the following interactive elements and gameplay flow:
 
-- **Goal Flag**: A red cone object is present in the scene, representing the goal.
-- **Character Movement**: You can move the character using W (forward), A (left), S (backward), and D (right) keys on your keyboard. The character moves along the X and Z axes and is constrained to the ground plane.
-- **Collectible Item and Score**: A spinning collectible item is present in the scene. When the character approaches it, the item is collected, disappears, and your score increases. The score is displayed at the top-left of the screen.
-- **Win Condition**: If the character gets close enough to the goal flag (within approximately 1 unit of distance), a success message "You reached the flag!" will be displayed via an alert box. This message appears only once per game session.
+-   **Player Character**: A simple character you can move using W (forward), A (left), S (backward), and D (right) keys. The character moves along the X and Z axes and is constrained to the ground plane.
+-   **The Goal - Party Gate**: A blue cone object representing the entrance to a party. To open it, you'll need a password.
+-   **The Quest Giver - Wise Old Tree (NPC)**:
+    -   Initially, the Tree will tell you about its friend, a little Robot who has lost its teddy bear and is too scared to come to the party without it. The Tree asks for your help.
+    -   If you find the teddy bear but talk to the Tree before giving it to the Robot, the Tree might hint that the teddy bear belongs to the Robot.
+    -   After you've helped the Robot, the Tree will thank you.
+-   **The Lost Teddy Bear (Collectible Item)**: A spinning teddy bear is hidden in the scene.
+    -   Collecting it will increase your score.
+-   **The Frightened Robot**: A new character in the game!
+    -   The Robot is initially scared (it jitters slightly).
+    -   If you approach the Robot *after* collecting the teddy bear, you will automatically give the teddy bear to it.
+    -   The Robot will cheer up (stop jittering) and thank you by giving you the secret password ('1234') for the Party Gate.
+-   **UI Display**:
+    -   **Score**: Displayed at the top-left, increases when you collect the teddy bear.
+    -   **Inventory/Status**: Shows if you've collected the teddy bear, if the robot has it, and if you have the password.
+    -   **Messages**: Dialogue from characters and important game messages appear at the top-left.
+-   **Win Condition**:
+    -   Collect the teddy bear.
+    -   Give the teddy bear to the Robot to get the password.
+    -   Approach the Party Gate with the password. A success message will be displayed.
+    -   If you approach the gate without the necessary items, messages will guide you on what's missing.
 
 ## Next Steps
 
-The plan is to expand this basic setup to include:
-- Story elements (characters, environments, props).
-- Interactivity to allow users to progress through the story.
-- Animations to bring the story to life.
+The plan is to further expand this interactive experience:
+- Enhance story elements with more dialogues and character interactions.
+- Add more sophisticated animations for characters and events.
+- Incorporate sound effects and background music.
+- Introduce additional small quests or interactive props.
+- Refine UI/UX for a more polished feel.
+- Explore more complex 3D modeling for characters and environment.
