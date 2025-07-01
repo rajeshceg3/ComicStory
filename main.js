@@ -65,14 +65,16 @@ if (typeof THREE === 'undefined') {
         ground.rotation.x = -Math.PI / 2; // Rotate it to be horizontal (flat).
         scene.add(ground); // Add the ground to the scene.
 
-        // Goal Flag: A red cone representing the goal.
+        // Party Gate: A wider cone representing the goal.
         // ConeGeometry(radius, height, radialSegments)
-        const goalGeometry = new THREE.ConeGeometry(0.5, 1, 16); // Radius 0.5, Height 1, 16 segments
-        const goalMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 }); // Red color for the flag
-        const goalFlag = new THREE.Mesh(goalGeometry, goalMaterial);
-        goalFlag.name = "goalFlag"; // Name the object
-        goalFlag.position.set(0, 0.5, -5); // Position it in front of the character
-        scene.add(goalFlag); // Add the goal flag to the scene.
+        const partyGateHeight = 1.5;
+        const partyGateRadius = 1;
+        const partyGateGeometry = new THREE.ConeGeometry(partyGateRadius, partyGateHeight, 16);
+        const partyGateMaterial = new THREE.MeshPhongMaterial({ color: 0x6082B6 }); // Muted blue (SlateGray-ish)
+        const partyGate = new THREE.Mesh(partyGateGeometry, partyGateMaterial);
+        partyGate.name = "partyGate"; // Name the object
+        partyGate.position.set(0, partyGateHeight / 2, -5); // Position it so its base is on the ground
+        scene.add(partyGate); // Add the party gate to the scene.
 
         // Lighting: Essential for MeshPhongMaterial to be visible.
 
@@ -98,21 +100,25 @@ if (typeof THREE === 'undefined') {
             const character = new THREE.Group();
 
             // Body
-            const bodyRadius = 0.5;
-            const bodyGeometry = new THREE.SphereGeometry(bodyRadius, 32, 32);
-            const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x0077ff }); // Blue body
+            const bodyWidth = 0.6;
+            const bodyHeight = 0.8;
+            const bodyDepth = 0.4;
+            const bodyGeometry = new THREE.BoxGeometry(bodyWidth, bodyHeight, bodyDepth);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0xadd8e6 }); // Light blue body
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.position.y = bodyRadius; // Position body so its base is at the group's origin
+            body.position.y = bodyHeight / 2; // Position body so its base is at the group's origin
             character.add(body);
 
             // Head
-            const headRadius = 0.3;
-            const headGeometry = new THREE.SphereGeometry(headRadius, 32, 32);
-            const headMaterial = new THREE.MeshPhongMaterial({ color: 0xffcc00 }); // Yellow head
+            const headSize = 0.4;
+            const headGeometry = new THREE.BoxGeometry(headSize, headSize, headSize);
+            const headMaterial = new THREE.MeshPhongMaterial({ color: 0xffd580 }); // Light orange head
             const head = new THREE.Mesh(headGeometry, headMaterial);
             head.name = "characterHead"; // Assign a name to the head
-            head.userData.initialY = bodyRadius * 2 + headRadius; // Store initial Y position
-            head.position.y = head.userData.initialY; // Position head on top of the body
+            // Position head on top of the body
+            // Body's top is at bodyHeight. Head's center will be bodyHeight + headSize / 2.
+            head.userData.initialY = bodyHeight + (headSize / 2);
+            head.position.y = head.userData.initialY;
             character.add(head);
 
             return character;
@@ -126,23 +132,79 @@ if (typeof THREE === 'undefined') {
         character.position.y = ground.position.y;
         scene.add(character);
 
-        // Collectible Item: A TorusKnot that can be collected.
-        // TorusKnotGeometry(radius, tube, tubularSegments, radialSegments)
-        const collectibleGeometry = new THREE.TorusKnotGeometry(0.3, 0.1, 100, 16);
-        const collectibleMaterial = new THREE.MeshPhongMaterial({ color: 0xffd700 }); // Gold color
-        let collectibleItem = new THREE.Mesh(collectibleGeometry, collectibleMaterial); // Changed to let
+        // Function to create the Teddy Bear
+        function createTeddyBear() {
+            const teddyBear = new THREE.Group();
+            const brown = 0x8B4513; // SaddleBrown
+
+            // Body
+            const bodyRadius = 0.3;
+            const bodyGeometry = new THREE.SphereGeometry(bodyRadius, 16, 16);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ color: brown });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = bodyRadius; // Base of body at y=0 in local group
+            teddyBear.add(body);
+
+            // Head
+            const headRadius = 0.2;
+            const headGeometry = new THREE.SphereGeometry(headRadius, 16, 16);
+            const headMaterial = new THREE.MeshPhongMaterial({ color: brown });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = bodyRadius * 2 + headRadius; // Position on top of body
+            teddyBear.add(head);
+
+            // Ears
+            const earRadius = 0.08; // Smaller ears
+            const earGeometry = new THREE.SphereGeometry(earRadius, 12, 12);
+            const earMaterial = new THREE.MeshPhongMaterial({ color: brown });
+
+            const leftEar = new THREE.Mesh(earGeometry, earMaterial);
+            leftEar.position.set(-headRadius * 0.7, head.position.y + headRadius * 0.7, 0); // Position on head
+            teddyBear.add(leftEar);
+
+            const rightEar = new THREE.Mesh(earGeometry, earMaterial);
+            rightEar.position.set(headRadius * 0.7, head.position.y + headRadius * 0.7, 0); // Position on head
+            teddyBear.add(rightEar);
+
+            // Paws (optional, simple spheres)
+            const pawRadius = 0.1;
+            const pawGeometry = new THREE.SphereGeometry(pawRadius, 8, 8);
+            const pawMaterial = new THREE.MeshPhongMaterial({color: brown });
+
+            const leftPaw = new THREE.Mesh(pawGeometry, pawMaterial);
+            leftPaw.position.set(-bodyRadius * 0.8, bodyRadius * 0.8, bodyRadius * 0.5);
+            teddyBear.add(leftPaw);
+
+            const rightPaw = new THREE.Mesh(pawGeometry, pawMaterial);
+            rightPaw.position.set(bodyRadius * 0.8, bodyRadius * 0.8, bodyRadius * 0.5);
+            teddyBear.add(rightPaw);
+
+
+            return teddyBear;
+        }
+
+        // Collectible Item: A Lost Teddy Bear
+        let collectibleItem = createTeddyBear();
         collectibleItem.name = "collectible"; // Name the object
-        collectibleItem.position.set(2, 0.5, -2); // Position it on the ground plane, adjust y based on ground and item size
+        // Adjust y position so the base of the teddy bear (bodyRadius above its local origin) sits on the ground.
+        // Ground is at -1.5. Teddy bear's local origin needs to be at ground.position.y + its lowest point (which is 0 for the group origin)
+        // The teddy bear's lowest point is its origin because body.position.y = bodyRadius.
+        // So we want the group's origin to be slightly above the ground if the teddy's base is at y=0 in local.
+        // Let's aim to have the *base* of the teddy (bottom of body sphere) at y = ground.position.y + ~0.1 for visual clearance
+        // The teddy bear group's origin is at the base of the body sphere. So set y to ground.position.y + bodyRadius
+        // collectibleItem.position.set(2, ground.position.y + 0.3, -2); // old calculation for TorusKnot was 0.5
+        collectibleItem.position.set(2, ground.position.y + 0.3, -2); // Body radius is 0.3
+
         scene.add(collectibleItem); // Add the collectible item to the scene.
 
         let animationTime = 0; // Time variable for animation
         let gameWon = false; // Flag to track if the game has been won
         let score = 0; // Initialize score
-        let hasKey = false;
+        let hasTeddyBear = false; // Renamed from hasKey
 
         function updateInfoDisplay() {
             if (infoDisplay) {
-                infoDisplay.textContent = `Score: ${score} | Key: ${hasKey ? 'Yes' : 'No'} | Password: ${hasPassword ? '1234' : 'No'}`;
+                infoDisplay.textContent = `Score: ${score} | Teddy Bear: ${hasTeddyBear ? 'Yes' : 'No'} | Code: ${hasPassword ? '1234' : 'No'}`;
             }
         }
         updateInfoDisplay(); // Initial display update
@@ -171,21 +233,32 @@ if (typeof THREE === 'undefined') {
         }
 
 
-        // Function to create the Non-Player Character (NPC)
-        // The NPC is a purple sphere that provides guidance to the player.
+        // Function to create the Non-Player Character (NPC) - Wise Old Tree
         function createNPC() {
-            const npcGroup = new THREE.Group(); // Use a group to potentially add more parts later
+            const npcGroup = new THREE.Group();
 
-            // NPC Body (purple sphere)
-            const npcBodyRadius = 0.5;
-            const npcBodyGeometry = new THREE.SphereGeometry(npcBodyRadius, 32, 32);
-            const npcBodyMaterial = new THREE.MeshPhongMaterial({ color: 0x800080 }); // Purple color
-            const npcBody = new THREE.Mesh(npcBodyGeometry, npcBodyMaterial);
-            npcBody.position.y = npcBodyRadius; // Position body so its base is at the group's origin
-            npcGroup.add(npcBody);
+            // Trunk
+            const trunkHeight = 1.2;
+            const trunkRadiusTop = 0.3;
+            const trunkRadiusBottom = 0.4;
+            const trunkGeometry = new THREE.CylinderGeometry(trunkRadiusTop, trunkRadiusBottom, trunkHeight, 16);
+            const trunkMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 }); // SaddleBrown
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = trunkHeight / 2; // Position trunk so its base is at y=0 for the group
+            npcGroup.add(trunk);
+
+            // Foliage
+            const foliageRadius = 0.8;
+            const foliageGeometry = new THREE.SphereGeometry(foliageRadius, 32, 32);
+            const foliageMaterial = new THREE.MeshPhongMaterial({ color: 0x228B22 }); // ForestGreen
+            const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+            // Position foliage on top of the trunk
+            foliage.position.y = trunkHeight + foliageRadius * 0.8; // Adjust foliage to sit nicely on trunk
+            npcGroup.add(foliage);
 
             // Position the NPC on the ground plane at a specific location
-            npcGroup.position.set(-2, ground.position.y, -2);
+            // The group's origin is at the base of the trunk.
+            npcGroup.position.set(-2, ground.position.y, -2); // ground.position.y places the base of the trunk on the ground
             npcGroup.name = "npcCharacter"; // Name the NPC object for potential reference
             scene.add(npcGroup); // Add the NPC to the main scene
             return npcGroup; // Return the NPC object
@@ -193,6 +266,55 @@ if (typeof THREE === 'undefined') {
 
         // Create and add the NPC to the scene during initialization
         npcCharacter = createNPC();
+
+        // Function to create environment props (trees and rocks)
+        function createEnvironmentProps() {
+            // Trees
+            const treePositions = [
+                { x: -3, z: 2 },
+                { x: 3.5, z: -1 },
+                { x: 1, z: 3 }
+            ];
+            const trunkHeight = 1;
+            const foliageRadius = 0.5;
+            const trunkMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 }); // Brown
+            const foliageMaterial = new THREE.MeshPhongMaterial({ color: 0x2E8B57 }); // SeaGreen
+
+            treePositions.forEach(pos => {
+                const tree = new THREE.Group();
+
+                const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.2, trunkHeight, 12);
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                trunk.position.y = trunkHeight / 2; // Base of trunk at group origin y=0
+                tree.add(trunk);
+
+                const foliageGeometry = new THREE.SphereGeometry(foliageRadius, 16, 16);
+                const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+                foliage.position.y = trunkHeight + foliageRadius; // Foliage on top of trunk
+                tree.add(foliage);
+
+                tree.position.set(pos.x, ground.position.y, pos.z); // Place base of tree on the ground
+                scene.add(tree);
+            });
+
+            // Rocks
+            const rockRadius = 0.4;
+            const rockPositions = [
+                { x: 2, y: ground.position.y + rockRadius, z: 1.5 },
+                { x: -1.5, y: ground.position.y + rockRadius, z: -3.5 }
+            ];
+            const rockGeometry = new THREE.DodecahedronGeometry(rockRadius, 0);
+            const rockMaterial = new THREE.MeshPhongMaterial({ color: 0x808080 }); // Grey
+
+            rockPositions.forEach(pos => {
+                const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+                rock.position.set(pos.x, pos.y, pos.z);
+                scene.add(rock);
+            });
+        }
+
+        // Add environment props to the scene
+        createEnvironmentProps();
 
         // Animation loop: Called repeatedly to update the scene and render it.
         function animate() {
@@ -223,26 +345,26 @@ if (typeof THREE === 'undefined') {
                     scene.remove(collectibleItem);
                     collectibleItem = null; // Set to null to prevent further checks and allow garbage collection
                     score++;
-                    hasKey = true;
-                    if (goalFlag) {
-                        goalFlag.material.color.setHex(0x00ff00); // Change goal to green
+                    hasTeddyBear = true; // Renamed from hasKey
+                    if (partyGate) { // Check if partyGate exists
+                        partyGate.material.color.setHex(0x00ff00); // Change gate to green
                     }
                     updateInfoDisplay();
                 }
             }
 
-            // Check for win condition: Player must be near the goal, have the key, and have the password.
-            if (!gameWon && character && goalFlag) { // Only check if game isn't already won and objects exist
-                const distanceToGoal = character.position.distanceTo(goalFlag.position);
-                if (distanceToGoal < 1.0) { // Player is close enough to the goal
-                    if (hasKey && hasPassword) { // Player has both items needed to win
-                        showNpcMessage("Congratulations! You used the key and the code to win!", 5000);
+            // Check for win condition: Player must be near the party gate, have the teddy bear, and have the password.
+            if (!gameWon && character && partyGate) { // Only check if game isn't already won and objects exist
+                const distanceToGoal = character.position.distanceTo(partyGate.position);
+                if (distanceToGoal < 1.0) { // Player is close enough to the gate
+                    if (hasTeddyBear && hasPassword) { // Player has both items needed to win
+                        showNpcMessage("Hooray! You opened the party gate with the code! Time to celebrate!", 5000);
                         gameWon = true; // Set the game as won
-                        // Future enhancement: Consider removing the goal or changing its appearance further.
-                    } else if (hasKey && !hasPassword) { // Player has the key but not the password
-                        showNpcMessage("You have the key, but you need the password from the NPC!", 2000);
-                    } else if (!hasKey) { // Player does not have the key (and by extension, likely not the password either)
-                        showNpcMessage("You need to find the key first!", 2000);
+                        // Future enhancement: Consider removing the gate or changing its appearance further.
+                    } else if (hasTeddyBear && !hasPassword) { // Player has the teddy bear but not the password
+                        showNpcMessage("You have the teddy bear, but you need the password from the NPC to open the gate!", 2000);
+                    } else if (!hasTeddyBear) { // Player does not have the teddy bear
+                        showNpcMessage("You need the teddy bear and a password to open this gate!", 2000);
                     }
                 }
             }
@@ -251,18 +373,18 @@ if (typeof THREE === 'undefined') {
             if (npcCharacter && character && !gameWon) { // Only allow NPC interaction if game is not won
                 const distanceToNPC = character.position.distanceTo(npcCharacter.position);
                 if (distanceToNPC < 1.5) { // Player is close enough to the NPC
-                    if (!npcInteracted && !hasKey) {
-                        // Initial interaction: Player doesn't have the key yet.
-                        showNpcMessage("NPC: Hello adventurer! Find the golden key first, then return to me.");
+                    if (!npcInteracted && !hasTeddyBear) {
+                        // Initial interaction: Player doesn't have the teddy bear yet.
+                        showNpcMessage("NPC: Hello little explorer! My friend, the robot, has lost their teddy bear. Can you help find it?");
                         npcInteracted = true; // Mark that the initial interaction has occurred.
-                    } else if (hasKey && !hasPassword) {
-                        // Second interaction: Player has the key but not the password.
-                        showNpcMessage("NPC: Well done! Your code is '1234'. Use it at the goal!");
+                    } else if (hasTeddyBear && !hasPassword) {
+                        // Second interaction: Player has the teddy bear but not the password.
+                        showNpcMessage("NPC: Oh, thank you! You found the teddy bear! To get to the party, the secret code for the gate is '1234'.");
                         hasPassword = true; // Grant the password.
                         updateInfoDisplay(); // Update the info display to show password status.
                     }
-                    // If npcInteracted is true and player still doesn't have the key, NPC says nothing more.
-                    // If player has both key and password, NPC interaction block is effectively skipped or has no new message.
+                    // If npcInteracted is true and player still doesn't have the teddy bear, NPC says nothing more.
+                    // If player has both teddy bear and password, NPC interaction block is effectively skipped or has no new message.
                 }
             }
 
