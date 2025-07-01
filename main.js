@@ -8,13 +8,21 @@ if (typeof THREE === 'undefined') {
     // Get the container element from the HTML.
     const container = document.getElementById('container');
     const infoDisplay = document.getElementById('infoDisplay'); // Get reference to info display
+    const npcMessageDisplay = document.getElementById('npcMessageDisplay'); // Get reference to NPC message display
 
     // Ensure the container element exists before proceeding.
     if (!container) {
         console.error('Container element #container not found.');
     } else if (!infoDisplay) {
         console.error('Info display element #infoDisplay not found.');
+    } else if (!npcMessageDisplay) {
+        console.error('NPC message display element #npcMessageDisplay not found.');
     } else {
+        // Game state variables
+        let npcCharacter; // Holds the Three.js Group for the NPC
+        let npcInteracted = false; // Flag to track if the initial NPC interaction has occurred
+        let hasPassword = false; // Flag to track if the player has received the password from the NPC
+
         // Scene setup: The scene is the container for all 3D objects.
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb); // Sky blue background
@@ -134,10 +142,57 @@ if (typeof THREE === 'undefined') {
 
         function updateInfoDisplay() {
             if (infoDisplay) {
-                infoDisplay.textContent = `Score: ${score} | Key: ${hasKey ? 'Yes' : 'No'}`;
+                infoDisplay.textContent = `Score: ${score} | Key: ${hasKey ? 'Yes' : 'No'} | Password: ${hasPassword ? '1234' : 'No'}`;
             }
         }
         updateInfoDisplay(); // Initial display update
+
+        // Function to show NPC messages in the npcMessageDisplay div
+        // message: The text to display
+        // duration: How long the message stays visible in milliseconds
+        let npcMessageTimeout; // Variable to store the timeout ID for clearing messages
+        function showNpcMessage(message, duration = 3000) {
+            if (npcMessageDisplay) {
+                npcMessageDisplay.textContent = message;
+                npcMessageDisplay.style.display = 'block'; // Make the message area visible
+
+                // Clear any existing timeout to prevent the message from disappearing prematurely if called again quickly
+                if (npcMessageTimeout) {
+                    clearTimeout(npcMessageTimeout);
+                }
+
+                // Set a timeout to clear the message and hide the display area
+                npcMessageTimeout = setTimeout(() => {
+                    npcMessageDisplay.textContent = '';
+                    npcMessageDisplay.style.display = 'none'; // Hide the message area
+                    npcMessageTimeout = null; // Reset timeout ID
+                }, duration);
+            }
+        }
+
+
+        // Function to create the Non-Player Character (NPC)
+        // The NPC is a purple sphere that provides guidance to the player.
+        function createNPC() {
+            const npcGroup = new THREE.Group(); // Use a group to potentially add more parts later
+
+            // NPC Body (purple sphere)
+            const npcBodyRadius = 0.5;
+            const npcBodyGeometry = new THREE.SphereGeometry(npcBodyRadius, 32, 32);
+            const npcBodyMaterial = new THREE.MeshPhongMaterial({ color: 0x800080 }); // Purple color
+            const npcBody = new THREE.Mesh(npcBodyGeometry, npcBodyMaterial);
+            npcBody.position.y = npcBodyRadius; // Position body so its base is at the group's origin
+            npcGroup.add(npcBody);
+
+            // Position the NPC on the ground plane at a specific location
+            npcGroup.position.set(-2, ground.position.y, -2);
+            npcGroup.name = "npcCharacter"; // Name the NPC object for potential reference
+            scene.add(npcGroup); // Add the NPC to the main scene
+            return npcGroup; // Return the NPC object
+        }
+
+        // Create and add the NPC to the scene during initialization
+        npcCharacter = createNPC();
 
         // Animation loop: Called repeatedly to update the scene and render it.
         function animate() {
@@ -176,24 +231,38 @@ if (typeof THREE === 'undefined') {
                 }
             }
 
-            // Check for win condition
-            if (!gameWon && character && goalFlag) {
+            // Check for win condition: Player must be near the goal, have the key, and have the password.
+            if (!gameWon && character && goalFlag) { // Only check if game isn't already won and objects exist
                 const distanceToGoal = character.position.distanceTo(goalFlag.position);
-                if (distanceToGoal < 1.0 && hasKey) { // Threshold of 1 unit and has key
-                    alert("Congratulations! You found the key and reached the goal!");
-                    gameWon = true;
-                } else if (distanceToGoal < 1.0 && !hasKey) { // Threshold of 1 unit but no key
-                    if (infoDisplay) {
-                        const originalText = infoDisplay.textContent; // Save current text
-                        infoDisplay.textContent = "You need to find the key first!";
-                        setTimeout(() => {
-                            // Check if the message is still "You need to find the key first!"
-                            // and if game is not won (to avoid overwriting a win message if key is obtained quickly after)
-                            if (infoDisplay.textContent === "You need to find the key first!" && !gameWon) {
-                                updateInfoDisplay(); // Restore score and key status
-                            }
-                        }, 2000); // Display message for 2 seconds
+                if (distanceToGoal < 1.0) { // Player is close enough to the goal
+                    if (hasKey && hasPassword) { // Player has both items needed to win
+                        showNpcMessage("Congratulations! You used the key and the code to win!", 5000);
+                        gameWon = true; // Set the game as won
+                        // Future enhancement: Consider removing the goal or changing its appearance further.
+                    } else if (hasKey && !hasPassword) { // Player has the key but not the password
+                        showNpcMessage("You have the key, but you need the password from the NPC!", 2000);
+                    } else if (!hasKey) { // Player does not have the key (and by extension, likely not the password either)
+                        showNpcMessage("You need to find the key first!", 2000);
                     }
+                }
+            }
+
+            // NPC Interaction Logic: Handles dialogues when the player is near the NPC.
+            if (npcCharacter && character && !gameWon) { // Only allow NPC interaction if game is not won
+                const distanceToNPC = character.position.distanceTo(npcCharacter.position);
+                if (distanceToNPC < 1.5) { // Player is close enough to the NPC
+                    if (!npcInteracted && !hasKey) {
+                        // Initial interaction: Player doesn't have the key yet.
+                        showNpcMessage("NPC: Hello adventurer! Find the golden key first, then return to me.");
+                        npcInteracted = true; // Mark that the initial interaction has occurred.
+                    } else if (hasKey && !hasPassword) {
+                        // Second interaction: Player has the key but not the password.
+                        showNpcMessage("NPC: Well done! Your code is '1234'. Use it at the goal!");
+                        hasPassword = true; // Grant the password.
+                        updateInfoDisplay(); // Update the info display to show password status.
+                    }
+                    // If npcInteracted is true and player still doesn't have the key, NPC says nothing more.
+                    // If player has both key and password, NPC interaction block is effectively skipped or has no new message.
                 }
             }
 
