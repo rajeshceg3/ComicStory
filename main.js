@@ -18,6 +18,10 @@ if (typeof THREE === 'undefined') {
     } else if (!npcMessageDisplay) {
         console.error('NPC message display element #npcMessageDisplay not found.');
     } else {
+        // Constants for game elements
+        const ROBOT_INITIAL_X = 3;
+        const ROBOT_INITIAL_Z = 1;
+
         // Game state variables
         let npcCharacter; // Holds the Three.js Group for the NPC
         let robotCharacter; // Holds the Three.js Group for the Robot
@@ -314,7 +318,10 @@ if (typeof THREE === 'undefined') {
 
         // Create, position, and add the Robot Character to the scene
         robotCharacter = createRobotCharacter();
-        robotCharacter.position.set(3, ground.position.y, 1); // Position on the ground
+        robotCharacter.position.set(ROBOT_INITIAL_X, ground.position.y, ROBOT_INITIAL_Z); // Position on the ground
+        // Store initial position in userData
+        robotCharacter.userData.initialX = ROBOT_INITIAL_X;
+        robotCharacter.userData.initialZ = ROBOT_INITIAL_Z;
         scene.add(robotCharacter);
 
         // Function to create environment props (trees and rocks)
@@ -396,6 +403,7 @@ if (typeof THREE === 'undefined') {
                     collectibleItem = null; // Set to null to prevent further checks and allow garbage collection
                     score++;
                     hasTeddyBear = true; // Renamed from hasKey
+                    showNpcMessage("You found a teddy bear!", 2500); // Added message
                     // Gate color change is now handled when robot gets the teddy bear
                     updateInfoDisplay();
                 }
@@ -413,8 +421,12 @@ if (typeof THREE === 'undefined') {
                         partyGate.material.color.setHex(0x00ff00); // Change gate to green
                     }
                     updateInfoDisplay();
-                    // Player should no longer "have" the teddy bear in their inventory for other interactions
-                    // hasTeddyBear = false; // This line is commented out as per discussion to allow win condition with player still "knowing" they helped with teddy.
+                    // Note on `hasTeddyBear`:
+                    // `hasTeddyBear` remains `true` even after giving it to the robot.
+                    // In this game's logic, it signifies that the player has completed the task of finding the teddy bear,
+                    // which is a prerequisite for the win condition (having helped with the bear AND obtained the password).
+                    // It does not strictly mean the player is still physically holding the bear.
+                    // // hasTeddyBear = false; // This line is commented out as per discussion to allow win condition with player still "knowing" they helped with teddy.
                                         // If hasTeddyBear is set to false, the win condition needs adjustment.
                                         // For now, player "keeps" teddy status, implying they completed that task.
                 }
@@ -446,8 +458,9 @@ if (typeof THREE === 'undefined') {
                 robotCharacter.position.z += (Math.random() - 0.5) * jitterAmount;
 
                 // Constrain jitter to prevent robot from moving too far
-                const initialRobotX = 3; // The initial X position set for the robot
-                const initialRobotZ = 1; // The initial Z position set for the robot
+                // Use userData for initial position, set during robot creation
+                const initialRobotX = robotCharacter.userData.initialX;
+                const initialRobotZ = robotCharacter.userData.initialZ;
                 robotCharacter.position.x = Math.max(initialRobotX - 0.1, Math.min(initialRobotX + 0.1, robotCharacter.position.x));
                 robotCharacter.position.z = Math.max(initialRobotZ - 0.1, Math.min(initialRobotZ + 0.1, robotCharacter.position.z));
 
