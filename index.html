@@ -3,17 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive 3D Story</title>
+    <title>Teddy's Adventure</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; } /* Remove default margin and hide scrollbars */
-        #container { width: 100vw; height: 100vh; display: block; } /* Make container fill the viewport */
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Poppins', sans-serif;
+            background-color: #111; /* Dark background for loading */
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        .ui-panel {
+            position: absolute;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #infoDisplay {
+            top: 20px;
+            left: 20px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        #npcMessageDisplay {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 500px;
+            text-align: center;
+            font-size: 1em;
+            display: none; /* Initially hidden */
+        }
+        #welcome-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            max-width: 600px;
+            z-index: 100;
+        }
+        #welcome-screen h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        #welcome-screen p {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        #welcome-screen button {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1em;
+            font-weight: 600;
+            color: #333;
+            background-color: #fff;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        #welcome-screen button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(255,255,255,0.15);
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://mrdoob.github.io/three.js/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-    <div id="infoDisplay" style="position: absolute; top: 10px; left: 10px; color: white; font-size: 20px; background-color: rgba(0,0,0,0.5); padding: 5px;">Score: 0</div>
-    <div id="npcMessageDisplay" style="position: absolute; top: 40px; left: 10px; color: white; font-size: 16px; background-color: rgba(0,0,0,0.5); padding: 5px; max-width: 300px;"></div>
+    <div id="welcome-screen" class="ui-panel">
+        <h1>Teddy's Adventure</h1>
+        <p>Help the little robot find his lost teddy bear so he can join the party! Use the <strong>W, A, S, D</strong> keys to move your character.</p>
+        <button id="startButton">Start Adventure</button>
+    </div>
+
+    <div id="infoDisplay" class="ui-panel">Score: 0</div>
+    <div id="npcMessageDisplay" class="ui-panel"></div>
+
     <div id="container"></div>
     <script src="main.js"></script>
 </body>

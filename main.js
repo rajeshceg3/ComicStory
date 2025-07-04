@@ -9,15 +9,19 @@ if (typeof THREE === 'undefined') {
     const container = document.getElementById('container');
     const infoDisplay = document.getElementById('infoDisplay'); // Get reference to info display
     const npcMessageDisplay = document.getElementById('npcMessageDisplay'); // Get reference to NPC message display
+    const welcomeScreen = document.getElementById('welcome-screen');
+    const startButton = document.getElementById('startButton');
 
     // Ensure the container element exists before proceeding.
-    if (!container) {
-        console.error('Container element #container not found.');
-    } else if (!infoDisplay) {
-        console.error('Info display element #infoDisplay not found.');
-    } else if (!npcMessageDisplay) {
-        console.error('NPC message display element #npcMessageDisplay not found.');
+    if (!container || !infoDisplay || !npcMessageDisplay || !welcomeScreen || !startButton) {
+        console.error('One or more UI elements are missing from the DOM.');
     } else {
+        // Hide game UI initially
+        infoDisplay.style.display = 'none';
+        npcMessageDisplay.style.display = 'none';
+        container.style.opacity = 0;
+
+
         // Constants for game elements
         const ROBOT_INITIAL_X = 3;
         const ROBOT_INITIAL_Z = 1;
@@ -28,6 +32,7 @@ if (typeof THREE === 'undefined') {
         let npcInteracted = false; // Flag to track if the initial NPC interaction has occurred
         let hasPassword = false; // Flag to track if the player has received the password from the NPC
         let robotHasTeddyBear = false; // Flag to track if the robot has received the teddy bear
+        let gameStarted = false;
 
         // Scene setup: The scene is the container for all 3D objects.
         const scene = new THREE.Scene();
@@ -39,8 +44,9 @@ if (typeof THREE === 'undefined') {
         camera.position.z = 5; // Position the camera further back to see the objects.
 
         // Renderer setup: Responsible for drawing the scene onto the HTML canvas.
-        const renderer = new THREE.WebGLRenderer();
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight); // Set renderer size to window size.
+        renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement); // Add the renderer's canvas to the container.
 
         // Check if OrbitControls was loaded
@@ -52,14 +58,9 @@ if (typeof THREE === 'undefined') {
 
         // OrbitControls setup: Allows camera manipulation (orbit, zoom, pan) with mouse/touch.
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
 
-        // Cube: A basic 3D box shape.
-        // BoxGeometry(width, height, depth)
-        const cubeGeometry = new THREE.BoxGeometry(1, 1, 1); // Standard 1x1x1 cube.
-        // MeshPhongMaterial: A material for shiny surfaces, reacts to light.
-        const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 }); // Red color for the cube.
-        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        scene.add(cube); // Add the cube to the scene.
 
         // Ground Plane: A flat surface below the cube.
         // PlaneGeometry(width, height)
@@ -86,20 +87,15 @@ if (typeof THREE === 'undefined') {
 
         // AmbientLight: Provides a soft, diffuse light that illuminates all objects in the scene equally.
         // AmbientLight(color, intensity)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Soft white light with 50% intensity.
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Soft white light with 50% intensity.
         scene.add(ambientLight);
 
         // DirectionalLight: Emits light in a specific direction, creating shadows and highlights.
         // DirectionalLight(color, intensity)
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5); // White light with 50% intensity.
-        directionalLight.position.set(5, 5, 5); // Position the light source.
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // White light with 50% intensity.
+        directionalLight.position.set(5, 10, 7.5); // Position the light source.
         scene.add(directionalLight);
 
-        // PointLight: Emits light from a single point in all directions.
-        // PointLight(color, intensity, distance)
-        const pointLight = new THREE.PointLight(0xffffff, 1, 10); // Bright white light, intensity 1, affects objects up to 10 units away.
-        pointLight.position.set(2, 2, 2); // Position the light source.
-        scene.add(pointLight);
 
         // Function to create the character
         function createCharacter() {
@@ -210,10 +206,14 @@ if (typeof THREE === 'undefined') {
 
         function updateInfoDisplay() {
             if (infoDisplay) {
-                infoDisplay.textContent = `Score: ${score} | Player Has Teddy: ${hasTeddyBear ? 'Yes' : 'No'} | Robot Has Teddy: ${robotHasTeddyBear ? 'Yes' : 'No'} | Code: ${hasPassword ? '1234' : 'No'}`;
+                let status = "Find the teddy bear!";
+                if (hasTeddyBear && !robotHasTeddyBear) status = "Give the teddy to the robot!";
+                else if (robotHasTeddyBear && !hasPassword) status = "The robot is happy!";
+                else if (hasPassword) status = "Head to the party gate!";
+                infoDisplay.innerHTML = `<strong>Objective:</strong> ${status}`;
             }
         }
-        updateInfoDisplay(); // Initial display update
+
 
         // Function to show NPC messages in the npcMessageDisplay div
         // message: The text to display
@@ -375,13 +375,10 @@ if (typeof THREE === 'undefined') {
 
         // Animation loop: Called repeatedly to update the scene and render it.
         function animate() {
+            if (!gameStarted) return;
             requestAnimationFrame(animate); // Request the next frame for smooth animation.
 
             animationTime += 0.05; // Increment time for animation
-
-            // Animate the cube by rotating it slightly each frame.
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
 
             // Animate the collectible item
             if (collectibleItem) {
@@ -403,7 +400,7 @@ if (typeof THREE === 'undefined') {
                     collectibleItem = null; // Set to null to prevent further checks and allow garbage collection
                     score++;
                     hasTeddyBear = true; // Renamed from hasKey
-                    showNpcMessage("You found a teddy bear!", 2500); // Added message
+                    showNpcMessage("You found the teddy bear!", 2500); // Added message
                     // Gate color change is now handled when robot gets the teddy bear
                     updateInfoDisplay();
                 }
@@ -474,7 +471,7 @@ if (typeof THREE === 'undefined') {
                 if (distanceToNPC < 1.5) { // Player is close enough to the NPC
                     if (hasTeddyBear && robotHasTeddyBear) { // Player helped robot
                         showNpcMessage("NPC: Thank you for helping the little robot! He's so much happier now. Enjoy the party!", 3000);
-                    } else if (!npcInteracted && !hasTeddyBear) { // Initial interaction: player doesn't have bear
+                    } else if (!npcInteracted && !hasTeddBear) { // Initial interaction: player doesn't have bear
                         showNpcMessage("NPC: Hello little explorer! My friend, the little robot, is scared of the dark, and his teddy bear helps him sleep. He can't come to the party without it! Can you find his teddy bear?", 5000);
                         npcInteracted = true; // Mark that the initial interaction has occurred.
                     } else if (npcInteracted && hasTeddyBear && !robotHasTeddyBear) { // Player has bear, but robot doesn't
@@ -492,9 +489,24 @@ if (typeof THREE === 'undefined') {
                 controls.update();
             }
 
+
+
             // Render the scene from the perspective of the camera.
             renderer.render(scene, camera);
         }
+
+        function startGame() {
+            welcomeScreen.style.display = 'none';
+            infoDisplay.style.display = 'block';
+            container.style.transition = 'opacity 1.5s ease-in';
+            container.style.opacity = 1;
+            gameStarted = true;
+            updateInfoDisplay();
+            animate();
+        }
+
+        startButton.addEventListener('click', startGame);
+
 
         // Handle window resize: Adjusts camera aspect ratio and renderer size when the window is resized.
         window.addEventListener('resize', () => {
@@ -505,6 +517,7 @@ if (typeof THREE === 'undefined') {
 
         // Event listener for keyboard input
         document.addEventListener('keydown', (event) => {
+            if (!gameStarted) return;
             const speed = 0.1;
             const boundary = 4.5;
 
@@ -523,7 +536,7 @@ if (typeof THREE === 'undefined') {
             character.position.z = Math.max(-boundary, Math.min(boundary, character.position.z));
         });
 
-        // Start the animation loop.
-        animate();
+        // Initial render to show something before the game starts
+        renderer.render(scene, camera);
     }
 }
