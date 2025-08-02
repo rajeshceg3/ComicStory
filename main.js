@@ -185,31 +185,77 @@ if (typeof THREE === 'undefined') {
             return teddyBear;
         }
 
+        // Function to create a Key
+        function createKey() {
+            const key = new THREE.Group();
+            const gold = 0xFFD700; // Gold color
+            const keyMaterial = new THREE.MeshPhongMaterial({ color: gold });
+
+            // Key Head (Torus)
+            const headRadius = 0.2;
+            const headTubeRadius = 0.05;
+            const headGeometry = new THREE.TorusGeometry(headRadius, headTubeRadius, 16, 100);
+            const keyHead = new THREE.Mesh(headGeometry, keyMaterial);
+            keyHead.position.y = 0.5; // Position it up
+            key.add(keyHead);
+
+            // Key Shaft (Cylinder)
+            const shaftHeight = 0.6;
+            const shaftRadius = 0.04;
+            const shaftGeometry = new THREE.CylinderGeometry(shaftRadius, shaftRadius, shaftHeight, 32);
+            const keyShaft = new THREE.Mesh(shaftGeometry, keyMaterial);
+            keyShaft.position.y = 0; // Center it
+            key.add(keyShaft);
+
+            // Key Tooth (Box)
+            const toothWidth = 0.15;
+            const toothHeight = 0.04;
+            const toothDepth = 0.04;
+            const toothGeometry = new THREE.BoxGeometry(toothWidth, toothHeight, toothDepth);
+            const keyTooth = new THREE.Mesh(toothGeometry, keyMaterial);
+            keyTooth.position.set(toothWidth / 2, -shaftHeight / 2 + toothHeight, 0); // Position at bottom of shaft
+            key.add(keyTooth);
+
+            return key;
+        }
+
         // Collectible Item: A Lost Teddy Bear
         let collectibleItem = createTeddyBear();
-        collectibleItem.name = "collectible"; // Name the object
-        // Adjust y position so the base of the teddy bear (bodyRadius above its local origin) sits on the ground.
-        // Ground is at -1.5. Teddy bear's local origin needs to be at ground.position.y + its lowest point (which is 0 for the group origin)
-        // The teddy bear's lowest point is its origin because body.position.y = bodyRadius.
-        // So we want the group's origin to be slightly above the ground if the teddy's base is at y=0 in local.
-        // Let's aim to have the *base* of the teddy (bottom of body sphere) at y = ground.position.y + ~0.1 for visual clearance
-        // The teddy bear group's origin is at the base of the body sphere. So set y to ground.position.y + bodyRadius
-        // collectibleItem.position.set(2, ground.position.y + 0.3, -2); // old calculation for TorusKnot was 0.5
-        collectibleItem.position.set(2, ground.position.y + 0.3, -2); // Body radius is 0.3
+        collectibleItem.name = "collectible"; // Name the object for the teddy bear
+        collectibleItem.position.set(2, ground.position.y + 0.3, -2);
+        scene.add(collectibleItem);
 
-        scene.add(collectibleItem); // Add the collectible item to the scene.
+        // Collectible Item: The Lost Key
+        let keyItem = createKey();
+        keyItem.name = "key"; // Name the object for the key
+        keyItem.position.set(-1.5, ground.position.y + 0.4, -3.0); // Position near the rocks
+        keyItem.rotation.x = Math.PI / 2; // Lay it flat initially
+        keyItem.visible = false; // Initially hidden until the quest starts
+        scene.add(keyItem);
 
         let animationTime = 0; // Time variable for animation
         let gameWon = false; // Flag to track if the game has been won
         let score = 0; // Initialize score
-        let hasTeddyBear = false; // Renamed from hasKey
+        let hasTeddyBear = false; // Player has the teddy bear
+        let hasKey = false; // Player has the key
+        let keyQuestStarted = false; // Player has been given the key quest
 
         function updateInfoDisplay() {
             if (infoDisplay) {
-                let status = "Find the teddy bear!";
-                if (hasTeddyBear && !robotHasTeddyBear) status = "Give the teddy to the robot!";
-                else if (robotHasTeddyBear && !hasPassword) status = "The robot is happy!";
-                else if (hasPassword) status = "Head to the party gate!";
+                let status = "";
+                if (!hasTeddyBear) {
+                    status = "Find the teddy bear!";
+                } else if (hasTeddyBear && !robotHasTeddyBear) {
+                    status = "Give the teddy to the robot!";
+                } else if (robotHasTeddyBear && !keyQuestStarted) {
+                    status = "Talk to the Wise Old Tree.";
+                } else if (keyQuestStarted && !hasKey) {
+                    status = "Find the lost key near the rocks.";
+                } else if (hasKey && hasPassword) {
+                    status = "You have everything! Go to the party gate!";
+                } else {
+                    status = "Head to the party gate!"; // Fallback
+                }
                 infoDisplay.innerHTML = `<strong>Objective:</strong> ${status}`;
             }
         }
@@ -380,9 +426,12 @@ if (typeof THREE === 'undefined') {
 
             animationTime += 0.05; // Increment time for animation
 
-            // Animate the collectible item
+            // Animate the collectible items
             if (collectibleItem) {
                 collectibleItem.rotation.y += 0.02;
+            }
+            if (keyItem && keyItem.visible) {
+                keyItem.rotation.z += 0.02; // Rotate on its local Z-axis (since it's laying flat)
             }
 
             // Bob the character's head
@@ -392,16 +441,27 @@ if (typeof THREE === 'undefined') {
                 characterHead.position.y = characterHead.userData.initialY + Math.sin(animationTime) * bobAmplitude;
             }
 
-            // Check for collectible item collision
-            if (collectibleItem && character) { // Ensure both character and collectibleItem exist
+            // Check for teddy bear collision
+            if (collectibleItem && character) {
                 const distanceToCollectible = character.position.distanceTo(collectibleItem.position);
-                if (distanceToCollectible < 1.0) { // Threshold of 1 unit
+                if (distanceToCollectible < 1.0) {
                     scene.remove(collectibleItem);
-                    collectibleItem = null; // Set to null to prevent further checks and allow garbage collection
+                    collectibleItem = null;
                     score++;
-                    hasTeddyBear = true; // Renamed from hasKey
-                    showNpcMessage("You found the teddy bear!", 2500); // Added message
-                    // Gate color change is now handled when robot gets the teddy bear
+                    hasTeddyBear = true;
+                    showNpcMessage("You found the teddy bear!", 2500);
+                    updateInfoDisplay();
+                }
+            }
+
+            // Check for key collision
+            if (keyItem && keyItem.visible && character) {
+                const distanceToKey = character.position.distanceTo(keyItem.position);
+                if (distanceToKey < 1.0) {
+                    scene.remove(keyItem);
+                    keyItem = null;
+                    hasKey = true;
+                    showNpcMessage("You found the key!", 2500);
                     updateInfoDisplay();
                 }
             }
@@ -415,7 +475,7 @@ if (typeof THREE === 'undefined') {
                     showNpcMessage("Robot: Oh, my teddy! Thank you! The password for the party is '1234'.", 4000);
 
                     if (partyGate) { // Check if partyGate exists
-                        partyGate.material.color.setHex(0x00ff00); // Change gate to green
+                        partyGate.material.color.setHex(0xFFFF00); // Change gate to yellow to indicate password received
                     }
                     updateInfoDisplay();
                     // Note on `hasTeddyBear`:
@@ -433,14 +493,16 @@ if (typeof THREE === 'undefined') {
             if (!gameWon && character && partyGate) { // Only check if game isn't already won and objects exist
                 const distanceToGoal = character.position.distanceTo(partyGate.position);
                 if (distanceToGoal < 1.0) { // Player is close enough to the gate
-                    if (hasTeddyBear && hasPassword) { // Player has both items needed to win
-                        showNpcMessage("Hooray! You opened the party gate with the code! Time to celebrate!", 5000);
+                    if (hasPassword && hasKey) { // Player has both items needed to win
+                        partyGate.material.color.setHex(0x00ff00); // Set gate to green upon winning
+                        showNpcMessage("Hooray! You opened the party gate! Time to celebrate!", 5000);
                         gameWon = true; // Set the game as won
-                        // Future enhancement: Consider removing the gate or changing its appearance further.
-                    } else if (hasTeddyBear && !hasPassword) { // Player has the teddy bear but not the password
-                        showNpcMessage("You've helped with the teddy bear, but you still need the password for the gate. Did the robot tell you what it is?", 2000);
-                    } else if (!hasTeddyBear) { // Player does not have the teddy bear
-                        showNpcMessage("You need the teddy bear and a password to open this gate!", 2000);
+                    } else if (hasPassword && !hasKey) { // Player has password but not the key
+                        showNpcMessage("The password worked, but the gate is still locked. You need a key!", 3000);
+                    } else if (!hasTeddyBear) { // Player does not have the teddy bear (and thus no password or key)
+                        showNpcMessage("You need to help the robot to get the password first!", 3000);
+                    } else { // Generic message if something is missing
+                        showNpcMessage("You need the password and the key to open this gate!", 3000);
                     }
                 }
             }
@@ -469,14 +531,21 @@ if (typeof THREE === 'undefined') {
             if (npcCharacter && character && !gameWon) { // Only allow NPC interaction if game is not won
                 const distanceToNPC = character.position.distanceTo(npcCharacter.position);
                 if (distanceToNPC < 1.5) { // Player is close enough to the NPC
-                    if (hasTeddyBear && robotHasTeddyBear) { // Player helped robot
-                        showNpcMessage("NPC: Thank you for helping the little robot! He's so much happier now. Enjoy the party!", 3000);
-                    } else if (!npcInteracted && !hasTeddBear) { // Initial interaction: player doesn't have bear
-                        showNpcMessage("NPC: Hello little explorer! My friend, the little robot, is scared of the dark, and his teddy bear helps him sleep. He can't come to the party without it! Can you find his teddy bear?", 5000);
-                        npcInteracted = true; // Mark that the initial interaction has occurred.
-                    } else if (npcInteracted && hasTeddyBear && !robotHasTeddyBear) { // Player has bear, but robot doesn't
+                    if (robotHasTeddyBear && !keyQuestStarted) { // Player helped robot, but hasn't received key quest yet
+                        showNpcMessage("NPC: Thank you for helping the little robot! One more thing... I seem to have lost the key to the party gate near the rocks. Could you find it?", 5000);
+                        keyQuestStarted = true;
+                        keyItem.visible = true; // Make the key visible now
+                        updateInfoDisplay();
+                    } else if (robotHasTeddyBear && keyQuestStarted && !hasKey) { // Player has key quest but no key
+                        showNpcMessage("NPC: The key should be somewhere near those big grey rocks. Good luck!", 3000);
+                    } else if (hasKey) { // Player has found the key
+                        showNpcMessage("NPC: You found the key! Amazing! Now you can open the gate.", 3000);
+                    } else if (!npcInteracted && !hasTeddyBear) { // Initial interaction
+                        showNpcMessage("NPC: Hello little explorer! Please find the teddy bear for my robot friend. He's too scared to come to the party without it!", 5000);
+                        npcInteracted = true;
+                    } else if (hasTeddyBear && !robotHasTeddyBear) { // Player has bear, but robot doesn't
                         showNpcMessage("NPC: I see you have a teddy bear! The little robot is over there. Maybe it's his?", 3000);
-                    } else if (npcInteracted && !hasTeddyBear) { // Player interacted, left, came back without bear
+                    } else { // Default message if player returns without bear
                         showNpcMessage("NPC: Please try to find the teddy bear for the little robot.", 3000);
                     }
                     // The old "NPC gives password" logic is removed as the robot now handles this.
