@@ -41,7 +41,7 @@ if (typeof THREE === 'undefined') {
         // Camera setup: Defines the perspective from which the scene is viewed.
         // PerspectiveCamera(fov, aspect, near, far)
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 5; // Position the camera further back to see the objects.
+        camera.position.set(0, 2, 5); // Position the camera for a better initial view.
 
         // Renderer setup: Responsible for drawing the scene onto the HTML canvas.
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -60,6 +60,12 @@ if (typeof THREE === 'undefined') {
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
+        // M2: Constrain camera to keep focus on the player and prevent spoiling the discovery.
+        controls.minDistance = 3;
+        controls.maxDistance = 8;
+        controls.minPolarAngle = Math.PI / 4; // Prevent looking from top-down
+        controls.maxPolarAngle = Math.PI / 2 - 0.1; // Prevent camera from going below ground
+        controls.enablePan = false; // Disable panning
 
 
         // Ground Plane: A flat surface below the cube.
@@ -256,32 +262,44 @@ if (typeof THREE === 'undefined') {
                 } else {
                     status = "Head to the party gate!"; // Fallback
                 }
-                infoDisplay.innerHTML = `<strong>Objective:</strong> ${status}`;
+                // L3: Use textContent for security
+                infoDisplay.innerHTML = ''; // Clear previous content
+                const strongTag = document.createElement('strong');
+                strongTag.textContent = 'Objective: ';
+                infoDisplay.appendChild(strongTag);
+                infoDisplay.append(status); // Appends the status text node
             }
         }
 
 
-        // Function to show NPC messages in the npcMessageDisplay div
-        // message: The text to display
-        // duration: How long the message stays visible in milliseconds
-        let npcMessageTimeout; // Variable to store the timeout ID for clearing messages
-        function showNpcMessage(message, duration = 3000) {
+        // L2: Implement a message queue to prevent flickering and message interruption.
+        let messageQueue = [];
+        let isMessageVisible = false;
+        let npcMessageTimeout;
+
+        function processMessageQueue() {
+            if (isMessageVisible || messageQueue.length === 0) {
+                return; // Don't process if a message is already visible or queue is empty
+            }
+
+            isMessageVisible = true;
+            const { message, duration } = messageQueue.shift(); // Get the next message
+
             if (npcMessageDisplay) {
                 npcMessageDisplay.textContent = message;
-                npcMessageDisplay.style.display = 'block'; // Make the message area visible
+                npcMessageDisplay.style.display = 'block';
 
-                // Clear any existing timeout to prevent the message from disappearing prematurely if called again quickly
-                if (npcMessageTimeout) {
-                    clearTimeout(npcMessageTimeout);
-                }
-
-                // Set a timeout to clear the message and hide the display area
                 npcMessageTimeout = setTimeout(() => {
-                    npcMessageDisplay.textContent = '';
-                    npcMessageDisplay.style.display = 'none'; // Hide the message area
-                    npcMessageTimeout = null; // Reset timeout ID
+                    npcMessageDisplay.style.display = 'none';
+                    isMessageVisible = false;
+                    processMessageQueue(); // Process the next message in the queue
                 }, duration);
             }
+        }
+
+        function showNpcMessage(message, duration = 3000) {
+            messageQueue.push({ message, duration });
+            processMessageQueue(); // Attempt to process the queue
         }
 
 
@@ -552,6 +570,12 @@ if (typeof THREE === 'undefined') {
                 }
             }
 
+            // M2: Make camera follow the character
+            if (character) {
+                const targetPosition = new THREE.Vector3(character.position.x, character.position.y + 0.8, character.position.z);
+                controls.target.lerp(targetPosition, 0.1);
+            }
+
             // Update OrbitControls: Necessary if controls.enableDamping or controls.autoRotate are set.
             // Also good practice to include for other potential updates.
             if (controls && typeof controls.update === 'function') {
@@ -590,14 +614,30 @@ if (typeof THREE === 'undefined') {
             const speed = 0.1;
             const boundary = 4.5;
 
+            // M1: Make movement camera-relative
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+            cameraDirection.y = 0; // Project onto XZ plane
+            cameraDirection.normalize();
+
+            const moveDirection = new THREE.Vector3(0, 0, 0);
+
             if (event.key === 'w' || event.key === 'W') {
-                character.position.z -= speed; // Move character forward
-            } else if (event.key === 'a' || event.key === 'A') {
-                character.position.x -= speed; // Move character left
+                moveDirection.add(cameraDirection);
             } else if (event.key === 's' || event.key === 'S') {
-                character.position.z += speed; // Move character backward
+                moveDirection.sub(cameraDirection);
+            } else if (event.key === 'a' || event.key === 'A') {
+                // To move left, we need a vector perpendicular to the camera direction
+                const left = new THREE.Vector3().crossVectors(camera.up, cameraDirection).normalize();
+                moveDirection.add(left);
             } else if (event.key === 'd' || event.key === 'D') {
-                character.position.x += speed; // Move character right
+                // To move right, we use the opposite of the left vector
+                const right = new THREE.Vector3().crossVectors(cameraDirection, camera.up).normalize();
+                moveDirection.add(right);
+            }
+
+            if (moveDirection.length() > 0) {
+                character.position.add(moveDirection.multiplyScalar(speed));
             }
 
             // Ensure the character stays within the ground plane boundaries

@@ -71,23 +71,25 @@
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        #welcome-screen button:hover {
+        #welcome-screen button:hover, #welcome-screen button:focus {
             transform: scale(1.05);
             box-shadow: 0 6px 20px rgba(255,255,255,0.15);
+            outline: 2px solid #fff; /* Added for focus visibility */
+            outline-offset: 2px; /* To make the outline more visible */
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r158/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-    <div id="welcome-screen" class="ui-panel">
-        <h1>Teddy's Adventure</h1>
-        <p>Help the little robot find his lost teddy bear so he can join the party! Use the <strong>W, A, S, D</strong> keys to move your character.</p>
+    <div id="welcome-screen" class="ui-panel" role="dialog" aria-labelledby="welcome-title" aria-describedby="welcome-desc">
+        <h1 id="welcome-title">Teddy's Adventure</h1>
+        <p id="welcome-desc">Help the little robot find his lost teddy bear so he can join the party! Use the <strong>W, A, S, D</strong> keys to move your character.</p>
         <button id="startButton">Start Adventure</button>
     </div>
 
-    <div id="infoDisplay" class="ui-panel">Score: 0</div>
-    <div id="npcMessageDisplay" class="ui-panel"></div>
+    <div id="infoDisplay" class="ui-panel" role="status" aria-live="polite">Score: 0</div>
+    <div id="npcMessageDisplay" class="ui-panel" role="status" aria-live="polite"></div>
 
     <div id="container"></div>
     <script src="main.js"></script>
